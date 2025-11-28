@@ -91,7 +91,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-st.title("🛠 Telecom Customer Churn Prediction - Development Mode")
+st.title("Telecom Customer Churn Prediction - Development Mode")
 
 COLORS = {
     "Yes": "#d2878c",
@@ -136,7 +136,7 @@ model = load_model()
 # =========================================================
 #              OBJECTIVE SECTION
 # =========================================================
-st.header("🎯 Objective")
+st.header("Objective")
 st.write("""
 The goal of this application is to predict **whether a telecom customer will churn or not**.  
 This environment is intended for exploration, debugging, and understanding model behavior.
