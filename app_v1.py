@@ -3,13 +3,34 @@ import pandas as pd
 import numpy as np
 import pickle
 from catboost import CatBoostClassifier
+import plotly.express as px
 
 # -----------------------------
 # Page Config
 # -----------------------------
-st.set_page_config(page_title="Churn Prediction App", layout="centered")
-st.title("📊 Telecom Customer Churn Prediction")
-st.write("Fill in the details below to estimate churn probability.")
+st.set_page_config(
+    page_title="Churn Prediction App",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+st.title("🛠 Telecom Customer Churn Prediction - Development Mode")
+
+# -----------------------------
+# Colors for Churn Visualizations
+# -----------------------------
+COLORS = {
+    "Yes": "#d2878c",   # churn
+    "No":  "#6f9ea3"    # stay
+}
+
+# -----------------------------
+# Load Dataset
+# -----------------------------
+@st.cache_data
+def load_data():
+    return pd.read_csv("data/cleaned_telecom_churn_data.csv")
+
+df_data = load_data()
 
 # -----------------------------
 # Load Metadata
@@ -36,17 +57,84 @@ def load_model():
 model = load_model()
 
 # -----------------------------
-# Helper Functions
+# Objective / Context
 # -----------------------------
+st.header("🎯 Objective")
+st.write("""
+The goal of this application is to predict **whether a telecom customer will churn or not**.  
+It is designed in **development mode** for exploring features, understanding model behavior, and testing predictions interactively.
+""")
+
+# -----------------------------
+# Data Visualizations
+# -----------------------------
+st.header("📊 Data Insights")
+
+# Payment Method vs Churn
+fig_payment = px.histogram(
+    df_data,
+    x="PaymentMethod",
+    color="Churn",
+    barmode="group",
+    color_discrete_map=COLORS,
+    title="Payment Method vs Churn"
+)
+fig_payment.update_layout(xaxis_tickangle=-30)
+st.plotly_chart(fig_payment, use_container_width=True)
+
+# Contract Type vs Churn
+fig_contract = px.histogram(
+    df_data,
+    x="Contract",
+    color="Churn",
+    barmode="group",
+    color_discrete_map=COLORS,
+    title="Contract Type vs Churn"
+)
+st.plotly_chart(fig_contract, use_container_width=True)
+
+# Overall Churn Distribution
+fig_pie = px.pie(
+    df_data,
+    names="Churn",
+    hole=0.6,
+    color="Churn",
+    color_discrete_map=COLORS,
+    title="Overall Churn Distribution"
+)
+fig_pie.update_traces(textinfo="percent+label", pull=[0, 0.06])
+st.plotly_chart(fig_pie, use_container_width=True)
+
+# -----------------------------
+# Model Metrics
+# -----------------------------
+st.header("📈 Model Performance Metrics")
+metrics = {
+    "Accuracy": 0.784414,
+    "F1 Score": 0.642790,
+    "ROC AUC": 0.843333,
+    "Precision": 0.574074,
+    "Recall": 0.730193,
+    "Threshold": 0.584878,
+    "Test Size": 0.25
+}
+
+cols = st.columns(len(metrics))
+for i, (k, v) in enumerate(metrics.items()):
+    with cols[i]:
+        st.metric(label=k, value=f"{v:.2f}")
+
+# -----------------------------
+# Prediction Interface
+# -----------------------------
+st.header("🤖 Predict Churn for a Customer")
+
 def yes_no_to_int(x):
     return 1 if x == "Yes" else 0
 
 def gender_to_int(x):
     return 1 if x == "Male" else 0
 
-# -----------------------------
-# Streamlit Form
-# -----------------------------
 with st.form("customer_form"):
     st.subheader("Customer Information")
 
@@ -57,7 +145,7 @@ with st.form("customer_form"):
     dependents = st.selectbox("Dependents", ["Yes", "No"])
     phone_service = st.selectbox("Phone Service", ["Yes", "No"])
 
-    # Categorical Inputs (strings including "No phone service")
+    # Categorical Inputs
     multiple_lines = st.selectbox("Multiple Lines", ["No phone service", "No", "Yes"])
     internet_service = st.selectbox("Internet Service", ["DSL", "Fiber optic", "No"])
     online_security = st.selectbox("Online Security", ["Yes", "No"])
@@ -69,28 +157,29 @@ with st.form("customer_form"):
 
     contract = st.selectbox("Contract", ["Month-to-month", "One year", "Two year"])
     paperless = st.selectbox("Paperless Billing", ["Yes", "No"])
-    payment_method = st.selectbox("Payment Method", [
-        "Electronic check", "Mailed check",
-        "Bank transfer (automatic)", "Credit card (automatic)"
-    ])
+    payment_method = st.selectbox(
+        "Payment Method",
+        ["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"]
+    )
 
     # Numeric Inputs
     tenure = st.number_input("Tenure (months)", min_value=0, max_value=72, value=12)
     monthly_charges = st.number_input("Monthly Charges", min_value=0.0, value=50.0)
     total_charges = st.number_input("Total Charges", min_value=0.0, value=500.0)
 
-    # Submit button
     submitted = st.form_submit_button("Predict Churn")
 
 # -----------------------------
 # Prediction Logic
 # -----------------------------
 if submitted:
-    # Engineered features
-    services_count = (np.array([
-        phone_service, multiple_lines, online_security, online_backup,
-        device_protection, tech_support, streaming_tv, streaming_movies
-    ]) == "Yes").sum()
+    # Feature engineering
+    services_count = (
+        np.array([
+            phone_service, multiple_lines, online_security, online_backup,
+            device_protection, tech_support, streaming_tv, streaming_movies
+        ]) == "Yes"
+    ).sum()
 
     payment_ratio = monthly_charges / (total_charges + 1)
     avg_charges = total_charges / (tenure + 1)
@@ -113,7 +202,6 @@ if submitted:
         "Dependents": yes_no_to_int(dependents),
         "tenure": tenure,
         "PhoneService": yes_no_to_int(phone_service),
-
         "MultipleLines": multiple_lines,
         "InternetService": internet_service,
         "OnlineSecurity": online_security,
@@ -122,13 +210,11 @@ if submitted:
         "TechSupport": tech_support,
         "StreamingTV": streaming_tv,
         "StreamingMovies": streaming_movies,
-
         "Contract": contract,
         "PaperlessBilling": paperless,
         "PaymentMethod": payment_method,
         "MonthlyCharges": monthly_charges,
         "TotalCharges": total_charges,
-
         "services_count": services_count,
         "payment_ratio": payment_ratio,
         "avg_charges": avg_charges,
@@ -138,42 +224,33 @@ if submitted:
     }
 
     df = pd.DataFrame([row])
-
-    # -----------------------------
-    # Safe Type Enforcement
-    # -----------------------------
-    # Ensure correct column order
     df = df[feature_names]
 
-    # Cast categorical features to string
     for c in cat_features:
         df[c] = df[c].astype(str)
-
-    # Cast numeric features to float
     for c in df.columns:
         if c not in cat_features:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    # -----------------------------
-    # Prediction
-    # -----------------------------
     proba = model.predict_proba(df)[0][1]
     prediction = int(proba >= best_threshold)
 
-    # -----------------------------
-    # Display Results
-    # -----------------------------
+    # Display Result
     st.subheader("🔍 Prediction Result")
     if prediction == 1:
-        st.error(f"⚠️ The customer is **likely to churn**.\n\n**Probability: {proba:.2f}**")
+        st.error(f"⚠️ Likely to churn — Probability: {proba:.2f}")
     else:
-        st.success(f"✅ The customer is **not likely to churn**.\n\n**Probability: {proba:.2f}**")
-
+        st.success(f"✅ Not likely to churn — Probability: {proba:.2f}")
     st.progress(float(proba))
 
-    st.write("---")
-    st.write("### 📌 Interpretation")
-    if prediction == 1:
-        st.write("This customer shows churn-risk signals. Consider retention strategies.")
-    else:
-        st.write("Customer appears stable based on current behavioral patterns.")
+# -----------------------------
+# Conclusion / Feature Improvements
+# -----------------------------
+st.header("📝 Conclusion & Feature Improvements")
+st.write("""
+- This app allows testing customer churn interactively.  
+- Observing features like **contract type, payment method, tenure, and services used** helps understand churn drivers.  
+- Future improvements:
+    - Include **SHAP or feature importance** visualization for better explainability.
+    - Extend dataset with more behavioral features for improved prediction accuracy.
+""")
