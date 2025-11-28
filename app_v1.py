@@ -29,7 +29,7 @@ COLORS = {
 @st.cache_data
 def load_data():
     df = pd.read_csv("data/cleaned_telecom_churn_data.csv")
-    df["Churn_label"] = df["Churn"].map({0: "No", 1: "Yes"})
+    df["Churn"] = df["Churn"].map({0: "No", 1: "Yes"})
     return df
 
 df_data = load_data()
@@ -73,15 +73,23 @@ It is designed in **development mode** for exploring features, understanding mod
 st.header("📊 Data Insights")
 
 def plot_histogram(x_col, title):
-    fig = px.histogram(
-        df_data,
+    df_grouped = df_data.groupby([x_col, "Churn"]).size().reset_index(name="count")
+    df_totals = df_data.groupby([x_col]).size().reset_index(name="total")
+    df_grouped = df_grouped.merge(df_totals, on=x_col)
+    df_grouped["percent"] = df_grouped["count"] / df_grouped["total"] * 100
+
+    fig = px.bar(
+        df_grouped,
         x=x_col,
-        color="Churn_label",
+        y="count",
+        color="Churn",
+        text=df_grouped["percent"].apply(lambda x: f"{x:.1f}%"),
         barmode="group",
         color_discrete_map=COLORS,
         title=title
     )
     fig.update_layout(xaxis_tickangle=-30)
+    fig.update_traces(textposition='outside')
     st.plotly_chart(fig, use_container_width=True)
 
 plot_histogram("PaymentMethod", "Payment Method vs Churn")
@@ -90,11 +98,11 @@ plot_histogram("Contract", "Contract Type vs Churn")
 # Overall Churn Distribution
 fig_pie = px.pie(
     df_data,
-    names="Churn_label",
+    names="Churn",
     hole=0.6,
-    color="Churn_label",
+    color="Churn",
     color_discrete_map=COLORS,
-    title="Overall Churn Distribution"
+    title="Overall Churn Distribution",
 )
 fig_pie.update_traces(textinfo="percent+label", pull=[0, 0.06])
 st.plotly_chart(fig_pie, use_container_width=True)
