@@ -345,11 +345,11 @@ st.plotly_chart(fig_top, use_container_width=True)
 st.header("Conclusion & Business Recommendations")
 st.write("""
 ### Key Drivers of Churn
-- Month-to-month contracts → highest churn risk  
-- Electronic check payments → unstable customer group  
-- New customers (0–6 months) → most likely to leave  
-- High monthly charges without clear value  
-- Low number of subscribed services
+ * Month-to-month contracts → highest churn risk  
+ * Electronic check payments → unstable customer group  
+ * New customers (0–6 months) → most likely to leave  
+ * High monthly charges without clear value  
+ * Low number of subscribed services
 
 ---
 
