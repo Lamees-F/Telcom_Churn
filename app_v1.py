@@ -19,8 +19,8 @@ st.title("🛠 Telecom Customer Churn Prediction - Development Mode")
 # Colors for Churn Visualizations
 # -----------------------------
 COLORS = {
-    "Yes": "#d2878c",   # churn
-    "No":  "#6f9ea3"    # stay
+    "Yes": "#d62728",   # churn
+    "No":  "#1f77b4"    # stay
 }
 
 # -----------------------------
@@ -28,7 +28,9 @@ COLORS = {
 # -----------------------------
 @st.cache_data
 def load_data():
-    return pd.read_csv("data/cleaned_telecom_churn_data.csv")
+    df = pd.read_csv("data/cleaned_telecom_churn_data.csv")
+    df["Churn_label"] = df["Churn"].map({0: "No", 1: "Yes"})
+    return df
 
 df_data = load_data()
 
@@ -70,35 +72,27 @@ It is designed in **development mode** for exploring features, understanding mod
 # -----------------------------
 st.header("📊 Data Insights")
 
-# Payment Method vs Churn
-fig_payment = px.histogram(
-    df_data,
-    x="PaymentMethod",
-    color="Churn",
-    barmode="group",
-    color_discrete_map=COLORS,
-    title="Payment Method vs Churn"
-)
-fig_payment.update_layout(xaxis_tickangle=-30)
-st.plotly_chart(fig_payment, use_container_width=True)
+def plot_histogram(x_col, title):
+    fig = px.histogram(
+        df_data,
+        x=x_col,
+        color="Churn_label",
+        barmode="group",
+        color_discrete_map=COLORS,
+        title=title
+    )
+    fig.update_layout(xaxis_tickangle=-30)
+    st.plotly_chart(fig, use_container_width=True)
 
-# Contract Type vs Churn
-fig_contract = px.histogram(
-    df_data,
-    x="Contract",
-    color="Churn",
-    barmode="group",
-    color_discrete_map=COLORS,
-    title="Contract Type vs Churn"
-)
-st.plotly_chart(fig_contract, use_container_width=True)
+plot_histogram("PaymentMethod", "Payment Method vs Churn")
+plot_histogram("Contract", "Contract Type vs Churn")
 
 # Overall Churn Distribution
 fig_pie = px.pie(
     df_data,
-    names="Churn",
+    names="Churn_label",
     hole=0.6,
-    color="Churn",
+    color="Churn_label",
     color_discrete_map=COLORS,
     title="Overall Churn Distribution"
 )
